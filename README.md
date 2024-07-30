@@ -1,0 +1,1 @@
+# TensorRT 8.6 Plugin ( C++ && Python ) Implementation of nn.PixelShuffle
