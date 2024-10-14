@@ -4,9 +4,8 @@
 #include <iostream>
 #include <memory>
 #include <vector>
-#include <assert.h>
+#include <cassert>
 
-// 错误检查宏
 #define CHECK(status) \
     do\
     {\
@@ -18,7 +17,6 @@
         }\
     } while (0)
 
-// 记录器类
 class Logger : public nvinfer1::ILogger
 {
     void log(Severity severity, const char* msg) noexcept override
@@ -30,7 +28,6 @@ class Logger : public nvinfer1::ILogger
 
 using namespace nvinfer1;
 
-// 构建引擎
 nvinfer1::ICudaEngine* buildEngine(int batchSize, int channels, int height, int width, int upscaleFactor)
 {
     auto builder = nvinfer1::createInferBuilder(gLogger);
@@ -78,32 +75,28 @@ int main()
 
     auto engine = buildEngine(batchSize, channels, height, width, upscaleFactor);
     if (!engine) {
-        std::cerr << "无法创建engine" << std::endl;
+        std::cerr << "create engine failed!" << std::endl;
         return 1;
     }
 
     // 创建context
     auto context = engine->createExecutionContext();
 
-    // 分配输入和输出缓冲区
     void* inputBuffer;
     void* outputBuffer;
     CHECK(cudaMalloc(&inputBuffer, batchSize * channels * height * width * sizeof(float)));
     CHECK(cudaMalloc(&outputBuffer, batchSize * channels / (upscaleFactor * upscaleFactor) * height * upscaleFactor * width * upscaleFactor * sizeof(float)));
 
-    // 设置输入数据（示例数据）
+    // 示例数据
     std::vector<float> inputData(batchSize * channels * height * width, 1.0f);
     CHECK(cudaMemcpy(inputBuffer, inputData.data(), inputData.size() * sizeof(float), cudaMemcpyHostToDevice));
 
-    // 执行推理
     void* bindings[] = {inputBuffer, outputBuffer};
     context->executeV2(bindings);
 
-    // 获取输出数据
     std::vector<float> outputData(batchSize * channels / (upscaleFactor * upscaleFactor) * height * upscaleFactor * width * upscaleFactor);
     CHECK(cudaMemcpy(outputData.data(), outputBuffer, outputData.size() * sizeof(float), cudaMemcpyDeviceToHost));
 
-    std::cout << "输出数据：" << std::endl;
     for (const auto& val : outputData) {
         std::cout << val << " ";
     }
